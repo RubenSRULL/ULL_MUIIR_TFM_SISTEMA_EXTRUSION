@@ -3,82 +3,110 @@
 # ==========================
 import time
 
-# ===================================
-# ===== Estados de la Extrusora =====
-# ===================================
-MACHINE_BOOT = 0
-MACHINE_IDLE = 1
-MACHINE_AUTO_INIT = 2
-MACHINE_AUTO_PREHEAT = 3
-MACHINE_AUTO_READY = 4
-MACHINE_AUTO_EXTRUDING = 5
-MACHINE_MANUAL_CONTROL = 6
-MACHINE_STOPPING = 7
-MACHINE_ALARM = 8
+# ==========================================================
+# ===== Estados reales generados por Simulink - Extrusora ===
+# ==========================================================
+# EXTRUDER_FSM_Y.state_id:
+#   0 BOOT
+#   1 STOP
+#   2 IDLE_AUTO
+#   3 PREHEAT
+#   4 EXTRUDING
+#   5 MANUAL
+#   6 ALARM
 
-# =====================================
-# ===== Estados de la Enrolladora =====
-# =====================================
-WINDER_OFF = 0
-WINDER_IDLE = 1
-WINDER_READY = 2
+MACHINE_BOOT = 0
+MACHINE_STOP = 1
+MACHINE_IDLE_AUTO = 2
+MACHINE_PREHEAT = 3
+MACHINE_EXTRUDING = 4
+MACHINE_MANUAL = 5
+MACHINE_ALARM = 6
+
+# Alias para mantener compatible el main.py existente.
+# OJO: Simulink no tiene AUTO_READY ni STOPPING separados.
+MACHINE_IDLE = MACHINE_STOP
+MACHINE_AUTO_INIT = MACHINE_IDLE_AUTO
+MACHINE_AUTO_PREHEAT = MACHINE_PREHEAT
+MACHINE_AUTO_READY = MACHINE_PREHEAT
+MACHINE_AUTO_EXTRUDING = MACHINE_EXTRUDING
+MACHINE_MANUAL_CONTROL = MACHINE_MANUAL
+MACHINE_STOPPING = MACHINE_STOP
+
+# ==========================================================
+# ===== Estados reales generados por Simulink - Enrolladora =
+# ==========================================================
+# WINDER_FSM_Y.state_id:
+#   0 BOOT
+#   1 STOP
+#   2 HOME
+#   3 RUNNING
+#   4 ALARM
+
+WINDER_BOOT = 0
+WINDER_STOP = 1
+WINDER_HOME = 2
 WINDER_RUNNING = 3
-WINDER_STOPPING = 4
-WINDER_ALARM = 5
+WINDER_ALARM = 4
+
+# Alias para mantener compatible el main.py existente.
+WINDER_OFF = WINDER_BOOT
+WINDER_IDLE = WINDER_STOP
+WINDER_READY = WINDER_HOME
+WINDER_STOPPING = WINDER_STOP
 
 # ==============================================
 # ===== Diccionarios de Nombres de Estados =====
 # ==============================================
+
 NOMBRES_ESTADOS_STM32 = {
     MACHINE_BOOT: "BOOT",
-    MACHINE_IDLE: "IDLE",
-    MACHINE_AUTO_INIT: "AUTO_INIT",
-    MACHINE_AUTO_PREHEAT: "AUTO_PREHEAT",
-    MACHINE_AUTO_READY: "AUTO_READY",
-    MACHINE_AUTO_EXTRUDING: "AUTO_EXTRUDING",
-    MACHINE_MANUAL_CONTROL: "MANUAL_CONTROL",
-    MACHINE_STOPPING: "STOPPING",
+    MACHINE_STOP: "STOP",
+    MACHINE_IDLE_AUTO: "IDLE_AUTO",
+    MACHINE_PREHEAT: "PREHEAT",
+    MACHINE_EXTRUDING: "EXTRUDING",
+    MACHINE_MANUAL: "MANUAL",
     MACHINE_ALARM: "ALARM",
 }
 
 NOMBRES_ESTADOS_WINDER = {
-    WINDER_OFF: "OFF",
-    WINDER_IDLE: "IDLE",
-    WINDER_READY: "READY",
+    WINDER_BOOT: "BOOT",
+    WINDER_STOP: "STOP",
+    WINDER_HOME: "HOME",
     WINDER_RUNNING: "RUNNING",
-    WINDER_STOPPING: "STOPPING",
     WINDER_ALARM: "ALARM",
 }
 
 # ============================================
 # ===== Estados de la Sub FSM Automática =====
 # ============================================
+
 AUTO_STATES = {
-    MACHINE_AUTO_INIT,
-    MACHINE_AUTO_PREHEAT,
-    MACHINE_AUTO_READY,
-    MACHINE_AUTO_EXTRUDING,
+    MACHINE_IDLE_AUTO,
+    MACHINE_PREHEAT,
+    MACHINE_EXTRUDING,
 }
 
 # =============================================
 # ===== Estados de la Sub FSM Parada/Stop =====
 # =============================================
+
 STOPPABLE_STATES = {
-    MACHINE_AUTO_PREHEAT,
-    MACHINE_AUTO_READY,
-    MACHINE_AUTO_EXTRUDING,
-    MACHINE_MANUAL_CONTROL,
+    MACHINE_PREHEAT,
+    MACHINE_EXTRUDING,
+    MACHINE_MANUAL,
 }
 
 # ============================================
 # ===== Fases de la FSM Automática (UI) =====
 # ============================================
+
 FASES_AUTOMATICAS = [
     {"titulo": "Configuración", "descripcion": "Configura material, diámetro objetivo y tiempo de proceso."},
-    {"titulo": "Precalentamiento", "descripcion": "Envía SET_TEMP y PREHEAT; espera temperatura alcanzada."},
-    {"titulo": "Listo", "descripcion": "La máquina está lista para comenzar la extrusión."},
+    {"titulo": "Precalentamiento", "descripcion": "Envía SET_TEMP y PREHEAT; la FSM queda en PREHEAT."},
+    {"titulo": "Listo", "descripcion": "Si la FSM está en PREHEAT y el firmware permite extrusión, pulsa START."},
     {"titulo": "Extrusión", "descripcion": "Proceso automático en marcha."},
-    {"titulo": "Parada", "descripcion": "Detención ordenada y retorno a IDLE."},
+    {"titulo": "Parada", "descripcion": "Detención ordenada y retorno a STOP."},
 ]
 
 # =========================================
@@ -312,19 +340,16 @@ def nombre_estado_winder(estado):
 def fase_desde_estado(estado, fase_actual=0):
     fase_actual = fase_actual or 0
 
-    if estado == MACHINE_AUTO_INIT:
-        return 0
+    if estado == MACHINE_IDLE_AUTO:
+        return max(fase_actual, 0)
 
-    if estado == MACHINE_AUTO_PREHEAT:
+    if estado == MACHINE_PREHEAT:
         return max(fase_actual, 1)
 
-    if estado == MACHINE_AUTO_READY:
-        return max(fase_actual, 2)
-
-    if estado == MACHINE_AUTO_EXTRUDING:
+    if estado == MACHINE_EXTRUDING:
         return max(fase_actual, 3)
 
-    if estado == MACHINE_STOPPING:
-        return 4
+    if estado == MACHINE_STOP:
+        return 4 if fase_actual >= 3 else fase_actual
 
     return fase_actual

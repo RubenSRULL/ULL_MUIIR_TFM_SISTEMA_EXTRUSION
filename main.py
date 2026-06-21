@@ -10,7 +10,7 @@ from gpiozero import LED
 
 from src.backend.CAMARA_HQ import CAMARA_HQ
 from src.backend.comandos_uc import (AUTO_STATES, STOPPABLE_STATES, FASES_AUTOMATICAS,
-                                     MACHINE_AUTO_INIT, MACHINE_AUTO_PREHEAT,  MACHINE_AUTO_READY, MACHINE_AUTO_EXTRUDING,
+                                     MACHINE_IDLE_AUTO, MACHINE_AUTO_PREHEAT,  MACHINE_AUTO_PREHEAT, MACHINE_AUTO_EXTRUDING,
                                      MACHINE_IDLE, MACHINE_MANUAL_CONTROL, MACHINE_STOPPING, WINDER_RUNNING, WINDER_ALARM,
                                      ControlUC, fase_desde_estado, nombre_estado, nombre_estado_winder,)
 from src.backend.graficos import figura_lineas
@@ -173,7 +173,7 @@ def panel_fase_automatica():
                 style={"display": "none"},
                 children=[
                     html.H4("Guiado del filamento"),
-                    html.P("Cuando el filamento esté guiado y la FSM esté en AUTO_READY, pulsa Siguiente."),
+                    html.P("Cuando la FSM esté en PREHEAT y el firmware permita extrusión, pulsa Siguiente."),
                 ],
             ),
             html.Div(
@@ -426,7 +426,7 @@ app.layout = html.Div(
                                     style={"display": "flex", "justifyContent": "space-between", "gap": "8px", "marginTop": "3px"},
                                     children=[
                                         html.Span("Estado enrolladora"),
-                                        html.Strong("0 - OFF", id="estado-enrolladora-display"),
+                                        html.Strong("0 - BOOT", id="estado-enrolladora-display"),
                                     ],
                                 ),
                             ],
@@ -694,10 +694,10 @@ def acciones_auto(n_ant, n_sig, n_temp_on, n_temp_off, n_fin, temp_objetivo, fas
             return 1, logs, no_update, no_update, no_update
         if fase == 1:
             ok_estado, estado, respuesta = uc.consultar_estado(timeout=0.5)
-            if ok_estado and estado == MACHINE_AUTO_READY:
-                logs.append(log("Temperatura alcanzada. AUTO_READY."))
-                return 2, logs, no_update, no_update, no_update
-            logs.append(log(f"Aún no está en AUTO_READY. Estado: {respuesta}"))
+            if ok_estado and estado in {MACHINE_AUTO_PREHEAT, MACHINE_AUTO_EXTRUDING}:
+                logs.append(log(f"FSM en {nombre_estado(estado)}. Puedes pasar a START."))
+                return 2 if estado == MACHINE_AUTO_PREHEAT else 3, logs, no_update, no_update, no_update
+            logs.append(log(f"Aún no está en PREHEAT. Estado: {respuesta}"))
             return fase, logs, no_update, no_update, no_update
         if fase == 2:
             ok, respuesta = uc.enviar("START")
@@ -793,27 +793,27 @@ def cambiar_vista(n_mon, n_auto, n_manual, n_estados, fase, logs):
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, fase_desde_estado(estado, fase), destino, None
         if estado == MACHINE_IDLE:
             ok, respuesta = uc.enviar("AUTO")
-            logs.append(log(f"AUTO: {'IDLE -> AUTO_INIT' if ok else 'rechazado'}. Respuesta: {respuesta}"))
+            logs.append(log(f"AUTO: {'STOP -> IDLE_AUTO' if ok else 'rechazado'}. Respuesta: {respuesta}"))
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, 0 if ok else no_update, destino, None
-        if estado == MACHINE_MANUAL_CONTROL:
+        if estado == MACHINE_MANUAL:
             ok, respuesta = uc.enviar("STOP")
             logs.append(log(f"Cambio Manual -> Auto: STOP {'OK' if ok else 'rechazado'}. AUTO queda pendiente. Respuesta: {respuesta}"))
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, no_update, destino, "auto" if ok else None
 
     if destino == "manual":
-        if estado == MACHINE_MANUAL_CONTROL:
-            logs.append(log("Vista Manual. FSM ya estaba en MANUAL_CONTROL."))
+        if estado == MACHINE_MANUAL:
+            logs.append(log("Vista Manual. FSM ya estaba en MANUAL."))
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, no_update, destino, None
         if estado == MACHINE_IDLE:
             ok, respuesta = uc.enviar("MANUAL")
-            logs.append(log(f"MANUAL: {'IDLE -> MANUAL_CONTROL' if ok else 'rechazado'}. Respuesta: {respuesta}"))
+            logs.append(log(f"MANUAL: {'STOP -> MANUAL' if ok else 'rechazado'}. Respuesta: {respuesta}"))
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, no_update, destino, None
-        if estado == MACHINE_AUTO_INIT:
+        if estado == MACHINE_IDLE_AUTO:
             ok_reset, resp_reset = uc.enviar("RESET_AUTO")
             ok_manual, resp_manual = uc.enviar("MANUAL") if ok_reset else (False, "MANUAL no enviado")
-            logs.append(log(f"AUTO_INIT -> Manual: RESET_AUTO={resp_reset}, MANUAL={resp_manual}"))
+            logs.append(log(f"IDLE_AUTO -> Manual: RESET_AUTO={resp_reset}, MANUAL={resp_manual}"))
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, no_update, destino, None
-        if estado in {MACHINE_AUTO_PREHEAT, MACHINE_AUTO_READY, MACHINE_AUTO_EXTRUDING}:
+        if estado in {MACHINE_AUTO_PREHEAT, MACHINE_AUTO_PREHEAT, MACHINE_AUTO_EXTRUDING}:
             ok, respuesta = uc.enviar("STOP")
             logs.append(log(f"Cambio Auto -> Manual: STOP {'OK' if ok else 'rechazado'}. MANUAL queda pendiente. Respuesta: {respuesta}"))
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, 4 if ok else no_update, destino, "manual" if ok else None

@@ -3,48 +3,44 @@
 from pathlib import Path
 
 
-# --------------------------------------------------
-# Mapeo de estados Python -> nodos draw.io del SVG
-# --------------------------------------------------
-# Si en draw.io cambias etiquetas/nodos, solo hay que actualizar estos IDs.
+# ==========================================================
+# Mapeo directo de state_id Simulink -> nodos draw.io del SVG
+# ==========================================================
 #
-# EXTRUDER_FSM.svg:
-#   BOOT       -> 5h7ZzsJRKUr04c_QEV-G-1
-#   STOP       -> 5h7ZzsJRKUr04c_QEV-G-3
-#   ALARM      -> 5h7ZzsJRKUr04c_QEV-G-4
-#   MANUAL     -> 5h7ZzsJRKUr04c_QEV-G-5
-#   IDLE_AUTO  -> 5h7ZzsJRKUr04c_QEV-G-6
-#   PREHEAT    -> 5h7ZzsJRKUr04c_QEV-G-7
-#   EXTRUDING  -> 5h7ZzsJRKUr04c_QEV-G-8
+# EXTRUDER_FSM_Y.state_id:
+#   0 BOOT       -> BOOT
+#   1 STOP       -> STOP
+#   2 IDLE_AUTO  -> IDLE_AUTO
+#   3 PREHEAT    -> PREHEAT
+#   4 EXTRUDING  -> EXTRUDING
+#   5 MANUAL     -> MANUAL
+#   6 ALARM      -> ALARM
 #
-# WINDER_FSM.svg:
-#   BOOT       -> ddRSOA4oobAeFci0r3gr-3
-#   STOP       -> ddRSOA4oobAeFci0r3gr-8
-#   ALARM      -> ddRSOA4oobAeFci0r3gr-11
-#   HOME       -> ddRSOA4oobAeFci0r3gr-18
-#   RUNNING    -> ddRSOA4oobAeFci0r3gr-25
-
+# WINDER_FSM_Y.state_id:
+#   0 BOOT       -> BOOT
+#   1 STOP       -> STOP
+#   2 HOME       -> HOME
+#   3 RUNNING    -> RUNNING
+#   4 ALARM      -> ALARM
+# ==========================================================
 
 EXTRUDER_CELL_IDS = {
-    0: "5h7ZzsJRKUr04c_QEV-G-1",  # MACHINE_BOOT -> BOOT
-    1: "5h7ZzsJRKUr04c_QEV-G-3",  # MACHINE_IDLE -> STOP
-    2: "5h7ZzsJRKUr04c_QEV-G-6",  # MACHINE_AUTO_INIT -> IDLE_AUTO
-    3: "5h7ZzsJRKUr04c_QEV-G-7",  # MACHINE_AUTO_PREHEAT -> PREHEAT
-    4: "5h7ZzsJRKUr04c_QEV-G-6",  # MACHINE_AUTO_READY -> IDLE_AUTO
-    5: "5h7ZzsJRKUr04c_QEV-G-8",  # MACHINE_AUTO_EXTRUDING -> EXTRUDING
-    6: "5h7ZzsJRKUr04c_QEV-G-5",  # MACHINE_MANUAL_CONTROL -> MANUAL
-    7: "5h7ZzsJRKUr04c_QEV-G-3",  # MACHINE_STOPPING -> STOP
-    8: "5h7ZzsJRKUr04c_QEV-G-4",  # MACHINE_ALARM -> ALARM
+    0: "5h7ZzsJRKUr04c_QEV-G-1",  # BOOT
+    1: "5h7ZzsJRKUr04c_QEV-G-3",  # STOP
+    2: "5h7ZzsJRKUr04c_QEV-G-6",  # IDLE_AUTO
+    3: "5h7ZzsJRKUr04c_QEV-G-7",  # PREHEAT
+    4: "5h7ZzsJRKUr04c_QEV-G-8",  # EXTRUDING
+    5: "5h7ZzsJRKUr04c_QEV-G-5",  # MANUAL
+    6: "5h7ZzsJRKUr04c_QEV-G-4",  # ALARM
 }
 
 
 WINDER_CELL_IDS = {
-    0: "ddRSOA4oobAeFci0r3gr-3",   # WINDER_OFF -> BOOT
-    1: "ddRSOA4oobAeFci0r3gr-8",   # WINDER_IDLE -> STOP
-    2: "ddRSOA4oobAeFci0r3gr-18",  # WINDER_READY -> HOME
-    3: "ddRSOA4oobAeFci0r3gr-25",  # WINDER_RUNNING -> RUNNING
-    4: "ddRSOA4oobAeFci0r3gr-8",   # WINDER_STOPPING -> STOP
-    5: "ddRSOA4oobAeFci0r3gr-11",  # WINDER_ALARM -> ALARM
+    0: "ddRSOA4oobAeFci0r3gr-3",   # BOOT
+    1: "ddRSOA4oobAeFci0r3gr-8",   # STOP
+    2: "ddRSOA4oobAeFci0r3gr-18",  # HOME
+    3: "ddRSOA4oobAeFci0r3gr-25",  # RUNNING
+    4: "ddRSOA4oobAeFci0r3gr-11",  # ALARM
 }
 
 
