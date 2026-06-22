@@ -795,13 +795,13 @@ def cambiar_vista(n_mon, n_auto, n_manual, n_estados, fase, logs):
             ok, respuesta = uc.enviar("AUTO")
             logs.append(log(f"AUTO: {'STOP -> IDLE_AUTO' if ok else 'rechazado'}. Respuesta: {respuesta}"))
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, 0 if ok else no_update, destino, None
-        if estado == MACHINE_MANUAL:
+        if estado == MACHINE_MANUAL_CONTROL:
             ok, respuesta = uc.enviar("STOP")
             logs.append(log(f"Cambio Manual -> Auto: STOP {'OK' if ok else 'rechazado'}. AUTO queda pendiente. Respuesta: {respuesta}"))
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, no_update, destino, "auto" if ok else None
 
     if destino == "manual":
-        if estado == MACHINE_MANUAL:
+        if estado == MACHINE_MANUAL_CONTROL:
             logs.append(log("Vista Manual. FSM ya estaba en MANUAL."))
             return estilos[0], estilos[1], estilos[2], estilos[3], logs, no_update, destino, None
         if estado == MACHINE_IDLE:
